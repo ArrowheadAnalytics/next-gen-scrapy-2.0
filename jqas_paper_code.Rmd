@@ -1,0 +1,428 @@
+---
+title: "JQAS Paper Figures"
+author: "Sarah Mallepalle"
+date: "4/18/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE, warning = FALSE, message = FALSE}
+library(GGally)
+library(MASS)
+library(tidyverse)
+library(mgcv)
+library(scales)
+library(gridExtra)
+library(raster)
+library(plyr)
+```
+
+```{r, echo=FALSE}
+pass_df <- read.csv("../pass_and_game_data.csv")
+passes <- subset(pass_df, !(is.na(x_coord)))
+passes$team <- as.character(passes$team)
+
+passes <- passes %>%
+  mutate(is_complete = 
+           ifelse(pass_type %in% c("COMPLETE", "TOUCHDOWN"), 1, 0),
+         is_incomplete = 
+           ifelse(pass_type %in% c("COMPLETE", "TOUCHDOWN"), 0, 1)
+         )
+
+complete <- subset(passes, pass_type %in% c("COMPLETE", "TOUCHDOWN"))
+incomplete <- subset(passes, pass_type %in% c("INCOMPLETE", "INTERCEPTION"))
+
+passes_18 <- subset(passes, season == 2018)
+passes_17 <- subset(passes, season == 2017)
+complete_18 <- subset(complete, season == 2018)
+incomplete_18 <- subset(incomplete, season == 2018)
+```
+
+# Section 4 Calculation and Figures 
+
+```{r}
+sum(passes_17$y_coord <= 10)/length(passes_17$y_coord)
+sum(passes_17$y_coord <= 20)/length(passes_17$y_coord)
+
+sum(passes_18$y_coord <= 10)/length(passes_18$y_coord)
+sum(passes_18$y_coord <= 20)/length(passes_18$y_coord)
+
+sum(passes_17$x_coord <= 53.33/4 & passes_17$x_coord >= -53.33/4 & passes_17$y_coord > 20)/length(passes_17$x_coord)
+sum(passes_18$x_coord <= 53.33/4 & passes_18$x_coord >= -53.33/4 & passes_18$y_coord > 20)/length(passes_18$x_coord)
+
+predict_data %>%
+  filter(y_coord <= 10) %>%
+  dplyr::select(complete_prob_17, complete_prob_18) %>%
+  summary()
+
+predict_data %>%
+  filter(y_coord <= 20) %>%
+  dplyr::select(complete_prob_17, complete_prob_18) %>%
+  summary()
+
+predict_data %>%
+  filter(y_coord > 20) %>%
+  dplyr::select(complete_prob_17, complete_prob_18) %>%
+  summary()
+
+# deep sidelines
+predict_data %>%
+  filter((x_coord >= 53.33/4 | x_coord <= -53.33/4), y_coord > 20) %>%
+  dplyr::select(complete_prob_17, complete_prob_18) %>%
+  summary()
+
+# deep middle
+predict_data %>%
+  filter((x_coord <= 53.33/4 & x_coord >= -53.33/4) & y_coord > 20) %>%
+  dplyr::select(complete_prob_17, complete_prob_18) %>%
+  summary()
+```
+
+
+
+# Model:
+
+```{r, echo=FALSE}
+league_model_17 <- gam(is_complete ~ ti(x_coord) + ti(y_coord) + ti(x_coord, y_coord), data = passes_17)
+league_model_18 <- gam(is_complete ~ ti(x_coord) + ti(y_coord) + ti(x_coord, y_coord), data = passes_18)
+
+a <- seq(-30, 30, length.out = 30--30+1)
+b <- seq(-10, 55, length.out = 55--10+1)
+
+predict_data <- data.frame(x_coord = c(outer(a, b * 0 + 1)), y_coord = c(outer(a * 0 + 1, b)))
+
+league_17_preds <- predict(league_model_17, predict_data, type = "response")
+league_18_preds <- predict(league_model_18, predict_data, type = "response")
+
+predict_data <- predict_data %>% 
+  mutate(complete_prob_17 = league_17_preds,
+         complete_prob_18 = league_18_preds
+         )
+```
+
+# Scatterplots of passes
+
+```{r, echo=FALSE}
+scatter_17 <- ggplot(passes_17) +
+  geom_point(aes(x = x_coord, y = y_coord, color = factor(is_complete)), size = 0.3) +
+  coord_fixed() +
+  theme_bw() +
+  geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+  annotate("text", -28, 0, vjust = -0.5, label = "LOS") +
+  labs(x = "Field Width", y = "Field Length",
+       title = "2017 Pass Locations",
+       color = "Complete?") +
+  scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+  scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55)) +
+  scale_color_manual(labels = c("No", "Yes"), values = c("0" = "red", "1" = "blue")) 
+
+scatter_18 <- ggplot(passes_18) +
+  geom_point(aes(x = x_coord, y = y_coord, color = factor(is_complete)), size = 0.3) +
+  coord_fixed() +
+  theme_bw() +
+  geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+  annotate("text", -28, 0, vjust = -0.5, label = "LOS") +
+  labs(x = "Field Width", y = "Field Length",
+       title = "2018 Pass Locations",
+       color = "Complete?") +
+  scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+  scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55)) +
+  scale_color_manual(labels = c("No", "Yes"), values = c("0" = "red", "1" = "blue")) 
+
+scatter_17
+scatter_18
+```
+
+# GAM
+
+```{r, echo=FALSE}
+gam_17 <- ggplot(predict_data) +
+  geom_tile(aes(x = x_coord, y = y_coord, fill = complete_prob_17*100)) +
+  scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white", 
+                       "Predicted\nProbability", midpoint = 50, limits = c(0,100))+
+  coord_fixed() +
+  theme_bw() +
+  ggtitle("2017 League Completion Probability") +
+  labs(x = "Field Width", y = "Field Length")
+
+gam_18 <- ggplot(predict_data) +
+  geom_tile(aes(x = x_coord, y = y_coord, fill = complete_prob_18*100)) +
+  scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white", 
+                       "Predicted\nProbability", midpoint = 50, limits = c(0,100))+
+  coord_fixed() +
+  theme_bw() +
+  ggtitle("2018 League Completion Probability") +
+  labs(x = "Field Width", y = "Field Length")
+
+#ggsave(gam_17, file="gam_17.png")
+#ggsave(gam_18, file="gam_18.png")
+```
+
+# KDE
+
+```{r, echo=FALSE}
+pass_density_17 <- kde2d(passes_17$x_coord, passes_17$y_coord,
+                      lims = c(-30, 30, -10, 55), 
+                      n = c(30--30+1, 55--10+1))
+pass_density_17_raster <- data.frame(rasterToPoints(raster(pass_density_17)))
+colnames(pass_density_17_raster) <- c("x_coord", "y_coord", "pass_density_17")
+predict_data <- join(predict_data, pass_density_17_raster, by = c("x_coord", "y_coord"))
+
+pass_density_18 <- kde2d(passes_18$x_coord, passes_18$y_coord,
+                      lims = c(-30, 30, -10, 55), 
+                      n = c(30--30+1, 55--10+1))
+pass_density_18_raster <- data.frame(rasterToPoints(raster(pass_density_18)))
+colnames(pass_density_18_raster) <- c("x_coord", "y_coord", "pass_density_18")
+predict_data <- join(predict_data, pass_density_18_raster, by = c("x_coord", "y_coord"))
+```
+
+
+```{r, echo=FALSE}
+kde_17 <- ggplot(predict_data) +
+  geom_tile(aes(x = x_coord, y = y_coord, fill = pass_density_17)) +
+  scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white", 
+                       "Density", midpoint = 0.0008) +
+  coord_fixed() +
+  theme_bw() +
+  ggtitle("2017 GAM League Pass\nKernel Density Estimate") +
+  labs(x = "Field Width", y = "Field Length")
+
+kde_18 <- ggplot(predict_data) +
+  geom_tile(aes(x = x_coord, y = y_coord, fill = pass_density_18)) +
+  scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white",
+                       "Density", midpoint = 0.0008) +
+  coord_fixed() +
+  theme_bw() +
+  ggtitle("2018 GAM League Pass\nKernel Density Estimate") +
+  labs(x = "Field Width", y = "Field Length")
+
+#ggsave(kde_17, file="kde_17.png")
+#ggsave(kde_18, file="kde_18.png")
+```
+
+```{r, echo=FALSE, eval=FALSE}
+grid.arrange(gam_17, kde_17, gam_18, kde_18, nrow = 2)
+```
+
+```{r, eval=FALSE, echo=FALSE, fig.align='center'}
+qb_number_summary <- c()
+qb_names <- c("Drew Brees", "Patrick Mahomes", "Joshua Allen", "Joshua Rosen")
+qb_ratings <- c("115.7", "113.8", "67.9", "66.7")
+med_n_passes <- mean(table(passes_18$name))
+league_preds <- predict_data$complete_prob_18*100
+
+for (i in 1:4)  {
+  qb <- qb_names[i]
+  qb_rating <- qb_ratings[i]
+  
+  predict_data$qb_loop_density <- NULL
+  predict_data$final_model <- NULL
+  predict_data$qb_loop_prob <- NULL
+  
+  qb_df <- subset(passes_18, name == qb & type == "reg")
+  n_qb <- nrow(qb_df)
+  qb_df <- subset(qb_df, !is.na(x_coord))
+  team_name <- qb_df$team[1]
+  
+  ##
+  qb_complete_model_loop <- gam(is_complete ~ ti(x_coord) + ti(y_coord) + ti(x_coord, y_coord), data = qb_df)
+  qb_complete_preds_loop <- predict(qb_complete_model_loop, predict_data, type = "response")
+  predict_data <- predict_data %>% 
+    mutate(
+      qb_loop_prob = qb_complete_preds_loop
+      )
+  
+  ##
+  qb_density_loop <- kde2d(qb_df$x_coord, qb_df$y_coord,
+                      lims = c(-30, 30, -10, 55), 
+                      n = c(30--30+1, 55--10+1))
+  
+  qb_density_loop_raster <- data.frame(rasterToPoints(raster(qb_density_loop)))
+  colnames(qb_density_loop_raster) <- c("x_coord", "y_coord", "qb_loop_density")
+  predict_data <- join(predict_data, qb_density_loop_raster, by = c("x_coord", "y_coord"))
+  
+  ##
+  
+  predict_data <- predict_data %>% 
+  mutate(
+    final_model = 
+      (med_n_passes*complete_prob_18*100*pass_density_18 + n_qb*qb_loop_prob*100*qb_loop_density)/
+      (med_n_passes*pass_density_18 + n_qb*qb_loop_density)
+    )
+  
+  mid_dens <- mean(predict_data$final_model)
+  
+  predict_data <- predict_data  %>%
+    mutate(final_model = 
+           ifelse(final_model < 0, 0, final_model)
+    )
+  
+  predict_data <- predict_data  %>%
+    mutate(final_model = 
+           ifelse(final_model > 100, 100, final_model)
+    )
+  
+  
+  gg_qb <- ggplot(predict_data) +
+    geom_tile(aes(x_coord, y_coord, fill = final_model)) +
+    scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white", 
+                         midpoint = 50, limits = c(0,100)) +
+    geom_point(data = qb_df, aes(x = x_coord, y = y_coord, color = factor(is_complete)),
+               size=0.3)+
+    coord_fixed() +
+    theme_bw() +
+    geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+    annotate("text", -28, 0, vjust = -0.5, label = "LOS") +
+    labs(x = "Field Width", y = "Field Length",
+         color = "Complete?",
+         fill = "Completion\nPercentage") +
+    ggtitle(paste("Predicted Completion Percentage:\n", 
+                  qb," (", team_name, ") in 2018", sep = "")) +
+    theme(plot.title = element_text(size=10),
+          axis.title = element_text(size=8),
+          legend.title = element_text(size=8)) +
+    scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+    scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55)) +
+    scale_color_manual(labels = c("No", "Yes"), values = c("0" = "red", "1" = "blue"))
+  
+  
+    gg_league_compare <- ggplot(predict_data) +
+      geom_tile(aes(x_coord, y_coord, fill = final_model - league_preds)) +
+      scale_fill_gradient2(low = "mediumpurple4", high = "seagreen4", mid = "white",
+                           midpoint = 0, limits=c(-100, 100)) +
+      coord_fixed() +
+      theme_bw() +
+      geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+      annotate("text", -28, 1, vjust = -0.5, label = "LOS") +
+      labs(x = "Field Width", y = "Field Length",
+           fill = "Percentage\nAbove/Below\nLeague Average",
+         caption = paste("Passer Rating = ", qb_rating, sep = "")) +
+      ggtitle(paste("Predicted Completion Percentage vs. League Average:\n", qb," (", team_name, ") in 2018", sep = "")) +
+    theme(plot.title = element_text(size=10),
+          axis.title = element_text(size=8),
+          legend.title = element_text(size=8)) +
+    scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+    scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55))
+      
+    print(gg_qb)
+    print(gg_league_compare)
+    
+    ggsave(gg_qb, file=paste0(qb, "_cp",".png"))
+    ggsave(gg_league_compare, file=paste0(qb, "_vs_league",".png"))
+}
+```
+
+
+```{r, echo=FALSE, fig.align='center'}
+med_n_passes <- mean(table(passes_18$name))
+league_preds <- predict_data$complete_prob_18*100
+#all_teams <- sort(unique(passes$team))
+all_teams <- c("CHI", "BAL", "CIN", "OAK")
+pro_exp <- c("95.50", "39.88", "-164.84", "-172.07")
+
+for (i in 1:4)  {
+  t_abb <- all_teams[i]
+  t_exp <- pro_exp[i]
+  
+  predict_data$team_loop_density <- NULL
+  predict_data$final_model <- NULL
+  predict_data$team_loop_prob <- NULL
+  
+  team_df <- subset(passes_18, type == "reg")
+  team_df <- subset(team_df, home_team == t_abb | away_team == t_abb)
+  team_df <- subset(team_df, team != t_abb)
+  team_df <- subset(team_df, !is.na(x_coord))
+  n_team <- nrow(team_df)
+  
+  ##
+  team_complete_model_loop <- gam(is_complete ~ ti(x_coord) + ti(y_coord) + ti(x_coord, y_coord), data = team_df)
+  team_complete_preds_loop <- predict(team_complete_model_loop, predict_data, type = "response")
+  predict_data <- predict_data %>% 
+    mutate(
+      team_loop_prob = team_complete_preds_loop
+      )
+  
+  ##
+  team_density_loop <- kde2d(team_df$x_coord, team_df$y_coord,
+                      lims = c(-30, 30, -10, 55), 
+                      n = c(30--30+1, 55--10+1))
+  
+  team_density_loop_raster <- data.frame(rasterToPoints(raster(team_density_loop)))
+  colnames(team_density_loop_raster) <- c("x_coord", "y_coord", "team_loop_density")
+  predict_data <- join(predict_data, team_density_loop_raster, by = c("x_coord", "y_coord"))
+  
+  ##
+  
+  predict_data <- predict_data %>% 
+  mutate(
+    final_model = 
+      (med_n_passes*complete_prob_18*100*pass_density_18 + n_team*team_loop_prob*100*team_loop_density)/
+      (med_n_passes*pass_density_18 + n_team*team_loop_density)
+    )
+  
+  mid_dens <- mean(predict_data$final_model)
+  
+  predict_data <- predict_data  %>%
+    mutate(final_model = 
+           ifelse(final_model < 0, 0, final_model)
+    )
+  
+  predict_data <- predict_data  %>%
+    mutate(final_model = 
+           ifelse(final_model > 100, 100, final_model)
+    )
+  
+  
+  gg_team <- ggplot(predict_data) +
+    geom_tile(aes(x_coord, y_coord, fill = final_model)) +
+    scale_fill_gradient2(low = "darkred", high = "darkblue", mid = "white", 
+                         midpoint = 50, limits = c(0,100)) +
+    geom_point(data = team_df, aes(x = x_coord, y = y_coord, color = factor(is_complete)),
+               size=0.3)+
+    coord_fixed() +
+    theme_bw() +
+    geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+    annotate("text", -28, 0, vjust = -0.5, label = "LOS") +
+    labs(x = "Field Width", y = "Field Length",
+         color = "Complete?",
+         fill = "Completion\nPercentage") +
+    ggtitle(paste("Predicted Completion Percentage Allowed:\n", 
+                    t_abb, " in 2018", sep = "")) +
+    theme(plot.title = element_text(size=10),
+          axis.title = element_text(size=8),
+          legend.title = element_text(size=8)) +
+    scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+    scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55)) +
+    scale_color_manual(labels = c("No", "Yes"), values = c("0" = "red", "1" = "blue"))
+  
+  
+    gg_league_compare <- ggplot(predict_data) +
+      geom_tile(aes(x_coord, y_coord, fill = final_model - league_preds)) +
+      scale_fill_gradient2(low = "mediumpurple4", high = "seagreen4", mid = "white",
+                           midpoint = 0, limits=c(-100, 100)) +
+      coord_fixed() +
+      theme_bw() +
+      geom_hline(color = "black", yintercept = 0, lty = "dashed") +
+      annotate("text", -28, 1, vjust = -0.5, label = "LOS") +
+      labs(x = "Field Width", y = "Field Length",
+           fill = "Percentage\nAbove/Below\nLeague Average",
+           caption = paste("EXP =", t_exp)) +
+      ggtitle(paste("Predicted Completion Percentage Allowed vs.\nLeague Average:", t_abb, " in 2018", sep = "")) +
+    theme(plot.title = element_text(size=10),
+          axis.title = element_text(size=8),
+          legend.title = element_text(size=8)) +
+    scale_x_continuous(breaks = seq(-30, 30, by = 10), limits = c(-30,30)) +
+    scale_y_continuous(breaks = seq(-10, 55, by = 10), limits = c(-10, 55))
+      
+    print(gg_team)
+    print(gg_league_compare)
+    
+    ggsave(gg_team, file=paste0(t_abb, "_cpa",".png"))
+    ggsave(gg_league_compare, file=paste0(t_abb, "_vs_league",".png"))
+}
+```
