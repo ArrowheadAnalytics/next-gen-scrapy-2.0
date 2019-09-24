@@ -45,12 +45,12 @@ Column | Definition
 
 ## Installation
 
-Requires Python 2.7 and R
+Requires Python 3.7 and R
 
-Python 2.7:
+Python 3.7:
 ```
 pip install --upgrade pip
-pip install requests bs4 lxml Pillow opencv-python scipy numpy pandas scikit-learn
+pip install requests bs4 lxml Pillow opencv-python scipy numpy pandas scikit-learn urllib
 ```
 
 R:
