@@ -10,7 +10,7 @@ The file `pass_and_game_data.csv` is the final version of all pass location data
 
 ### Example Undistorted Pass Chart (with axes in yards) - Nick Foles in Super Bowl LII
 
-![Nick Foles in Super Bowl LII](https://raw.githubusercontent.com/sarahmallepalle/next-gen-scrapy/master/axes.jpg)
+![Nick Foles in Super Bowl LII](https://raw.githubusercontent.com/ArrowheadAnalytics/next-gen-scrapy/master/axes.jpg)
 
 ## Output Data
 
@@ -50,7 +50,7 @@ Requires Python 3.7 and R
 Python 3.7:
 ```
 pip install --upgrade pip
-pip install requests bs4 lxml Pillow opencv-python scipy numpy pandas scikit-learn urllib
+pip install requests bs4 lxml Pillow opencv-python scipy numpy pandas scikit-learn urllib nflgame-redux==2.0.1a1
 ```
 
 R:
