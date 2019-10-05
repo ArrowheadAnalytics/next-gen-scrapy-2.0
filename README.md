@@ -1,7 +1,7 @@
 # Intro to `next-gen-scrapy`
 
 ## Summary
-The contests of this githhub (and this entire README) are all from Sarah Mallepalle.
+The contests of this githhub are all from Sarah Mallepalle.The code has been slightly modified to work for Python 3+, but other than that everything (including the rest of this readme) all remain the same. Thanks to Sarah for such an amazing contribution to the public!
 
 This is the first version released of `next-gen-scrapy`. This repo of was built to allow users to extract all pass locations -  completions, incompletions, interceptions, and touchdowns - from the regular season and postseason pass charts provided by Next Gen Stats beginning in 2017.
 
