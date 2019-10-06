@@ -11,7 +11,7 @@ The file `pass_and_game_data.csv` is the final version of all pass location data
 
 ### Example Undistorted Pass Chart (with axes in yards) - Nick Foles in Super Bowl LII
 
-![Nick Foles in Super Bowl LII](https://raw.githubusercontent.com/ArrowheadAnalytics/next-gen-scrapy/master/axes.jpg)
+![Nick Foles in Super Bowl LII](https://raw.githubusercontent.com/ArrowheadAnalytics/next-gen-scrapy-updated/master/axes.jpg)
 
 ## Output Data
 
