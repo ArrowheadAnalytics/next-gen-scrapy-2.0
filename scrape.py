@@ -25,7 +25,9 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Download image from NFL next gen stats')
 
-parser.add_argument('-s', '--seasons', nargs='+', type=str,dest='seasons',default=['2019'], help='input season')
+seasons = ['2019']
+
+parser.add_argument('-s', '--seasons', nargs='+', type=str,dest='seasons',default=seasons, help='input season')
 
 teams = ["arizona-cardinals",
 	"atlanta-falcons",
