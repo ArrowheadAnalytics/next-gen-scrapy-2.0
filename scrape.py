@@ -25,10 +25,6 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Download image from NFL next gen stats')
 
-seasons = ['2019']
-
-parser.add_argument('-s', '--seasons', nargs='+', type=str,dest='seasons',default=seasons, help='input season')
-
 teams = ["arizona-cardinals",
 	"atlanta-falcons",
 	"baltimore-ravens",
@@ -63,14 +59,15 @@ teams = ["arizona-cardinals",
 	"washington-redskins"
 ]
 
-
-parser.add_argument('-t', '--teams', nargs='+', type=str,dest='teams',default=teams, help='input team')
-
+seasons = ["2019"]
 
 weeks = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13",
 "14", "15", "16", "17", "wild-card", "divisional", "conference", "super-bowl"]
 
+parser.add_argument('-s', '--seasons', nargs='+', type=str,dest='seasons',default=seasons, help='input season')
+parser.add_argument('-t', '--teams', nargs='+', type=str,dest='teams',default=teams, help='input team')
 parser.add_argument('-w', '--weeks', nargs='+', type=str,dest='weeks',default=weeks, help='input week')
+
 args = parser.parse_args()
 seasons = args.seasons
 weeks = args.weeks
