@@ -1,8 +1,6 @@
 # Intro to `next-gen-scrapy`
 
 ## Summary
-The contests of this githhub are all from Sarah Mallepalle.The code has been slightly modified to work for Python 3+, but other than that everything (including the rest of this readme) all remain the same. Thanks to Sarah for such an amazing contribution to the public!
-
 This is the second version released of `next-gen-scrapy`. The first generation of next-gen-scrapy was built to allow users to extract all pass locations -  completions, incompletions, interceptions, and touchdowns - from the regular season and postseason pass charts provided by Next Gen Stats beginning in 2017.This version was created by Sarah Mallepalle and her team at Carnegie Mellon University - you can find detailed description of that work here: https://arxiv.org/abs/1906.03339. Thanks to Sarah for such an amazing contribution to the public!
 
 I have contributed an additional script which modified the original code to scrape the Next Gen Stats route charts, instead of the passing locations. This scrapes all completed, incomplete, and yards after completion using largely the same framework as the original version. The difference is that instead of a clustering algorithm to identify the center of the pass locations, the entire route is used and each pixel from that route is translated into coordinates. Below is Sarah's description of the tool:
